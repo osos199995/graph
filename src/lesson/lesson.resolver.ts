@@ -1,28 +1,42 @@
-import { Resolver, Query, Mutation, Args } from "@nestjs/graphql";
+import { Resolver, Query, Mutation, Args, ResolveField, Parent } from "@nestjs/graphql";
 import { LessonType } from './lesson.type';
-import { LessonService } from "./lesson.service";
-
+import { LessonService } from './lesson.service';
+import { CreateLessonInput } from './lesson.input';
+import { AssignStudentsToLessonInput } from './assign-students-to-lesson.input';
+import { LessonEntity } from './lesson.entity';
+import { StudentService } from '../student/student.service';
 
 @Resolver((of) => LessonType)
 export class LessonResolver {
-  constructor(private lessonService:LessonService) {
-  }
+  constructor(
+    private lessonService: LessonService,
+    private studentService: StudentService,
+  ) {}
   @Query((returns) => LessonType)
-  lesson() {
-    return {
-      id: '42341234',
-      name: 'physics class',
-      startDate: new Date().toISOString(),
-      endDate: new Date().toISOString(),
-    };
+  lesson(@Args('id') id: string) {
+    return this.lessonService.getLesson(id);
   }
-  @Mutation(returns => LessonType)
+  @Query((returns) => [LessonType])
+  getLesson() {
+    return this.lessonService.getAllLesson();
+  }
+  @Mutation((returns) => LessonType)
   creationLesson(
-    @Args('name') name:string,
-    @Args('startDate') startDate:string,
-    @Args('endDate') endDate:string,
-  ){
-    return this.lessonService.createLesson(name,startDate,endDate);
+    @Args('createlessonInput') createlessonInput: CreateLessonInput,
+  ) {
+    return this.lessonService.createLesson(createlessonInput);
+  }
+  @Mutation((returns) => LessonType)
+  assignStudentToLesson(
+    @Args('assignStudentsToLessonInput')
+    assignStudentsToLessonInput: AssignStudentsToLessonInput,
+  ) {
+    const { lessonID, studentIds } = assignStudentsToLessonInput;
+    return this.lessonService.assignStudentToLesson(lessonID, studentIds);
   }
 
+  @ResolveField()
+  async students(@Parent() lesson: LessonEntity) {
+    return this.studentService.getManyStudents(lesson.students);
+  }
 }
